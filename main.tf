@@ -77,7 +77,7 @@ resource "aws_iam_role" "github_oidc_deploy" {
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringEquals = {
-            "token.actions.githubuseraccount.com:aud" = "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
             "token.actions.githubusercontent.com:sub" = "repo:zacharykwek15/IaC:ref:refs/heads/main"
           }
         }
@@ -89,4 +89,14 @@ resource "aws_iam_role" "github_oidc_deploy" {
 resource "aws_iam_role_policy_attachment" "github_oidc_policy" {
   role       = aws_iam_role.github_oidc_deploy.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "github_oidc_ecr" {
+  role       = aws_iam_role.github_oidc_deploy.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "github_oidc_logs" {
+  role       = aws_iam_role.github_oidc_deploy.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
