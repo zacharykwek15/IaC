@@ -17,11 +17,11 @@ module "ecs" {
   }
 
   services = {
-    YOUR-TASKDEFINITION-NAME = { #task definition and service name -> #Change
+    "${local.prefix}-service" = { #task definition and service name -> #Change
       cpu    = 512
       memory = 1024
       container_definitions = {
-        YOUR-CONTAINER-NAME = { #container name -> Change
+        "myapp" = { #container name -> Change
           essential = true
           image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${local.prefix}-ecr:latest"
           port_mappings = [
@@ -34,8 +34,30 @@ module "ecs" {
       }
       assign_public_ip                   = true
       deployment_minimum_healthy_percent = 100
-      subnet_ids                   = [] #List of subnet IDs to use for your tasks
-      security_group_ids           = [] #Create a SG resource and pass it here
+      subnet_ids                   = var.public_subnets.ids #List of subnet IDs to use for your tasks
+      security_group_ids           = [aws.security_group.ecs_sg.id] #Create a SG resource and pass it here
     }
+  }
+}
+
+
+# Security group example
+resource "aws_security_group" "ecs_sg" {
+  name        = "${local.prefix}-ecs-sg"
+  description = "Allow HTTP"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
