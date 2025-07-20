@@ -7,6 +7,9 @@ data "aws_vpc" "default" {
 
 }
 
+data "aws_caller_identity" "current" {}
+
+
 data  "aws_subnets" default {
     filter {
         name = "vpc-id"
