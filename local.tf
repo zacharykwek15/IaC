@@ -1,6 +1,6 @@
 locals {
-  project = "myapp"         # Or whatever your app/project name is
-  env     = "dev"           # Or "prod", "staging", etc.
+  project = "zh"         # Or whatever your app/project name is
+  env     = "ecr"           # Or "prod", "staging", etc.
 
   prefix  = "${local.project}-${local.env}"
 }
