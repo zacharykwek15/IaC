@@ -1,3 +1,25 @@
+
+#Need to create a VPC 
+
+module "vpc" {
+    source = "terraform-aws-modules/vpc/aws"
+    name = "zh-vpc"
+    cidr = "10.0.0.0/16"
+    azs             = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+    private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]         #Creation of private subnet 
+    public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]   #Creation of public subnet
+
+    enable_nat_gateway   = false        #change to true if we need to establish nat gateway for private subnet access to internet
+
+    tags = {
+        Terraform = "true"
+        environment ="dev"
+        owner = "zh"
+ }
+}
+
+
+
 resource "aws_ecr_repository" "ecr" {
   name         = "${local.prefix}-ecr"
   force_delete = true
@@ -40,7 +62,7 @@ module "ecs" {
   }
 }
 
-
+  
 # Security group example
 resource "aws_security_group" "ecs_sg" {
   name        = "${local.prefix}-ecs-sg"
@@ -67,7 +89,7 @@ resource "aws_iam_role" "github_oidc_deploy" {
   name = "github-oidc-deploy-role"
 
   assume_role_policy = jsonencode({
-    Version = "2021-10-17"
+    Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
@@ -100,3 +122,13 @@ resource "aws_iam_role_policy_attachment" "github_oidc_logs" {
   role       = aws_iam_role.github_oidc_deploy.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
+
+
+
+
+
+
+
+
+
+
