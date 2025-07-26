@@ -2,6 +2,7 @@
 #Need to create a VPC 
 
 module "vpc" {
+    version = "5.0"
     source = "terraform-aws-modules/vpc/aws"
     name = "zh-vpc"
     cidr = "10.0.0.0/16"
@@ -27,9 +28,10 @@ resource "aws_ecr_repository" "ecr" {
 
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
-  version = "~> 5.9.0"
+  version = "5.0"
 
   cluster_name = "${local.prefix}-ecs"
+
   fargate_capacity_providers = {
     FARGATE = {
       default_capacity_provider_strategy = {
@@ -39,13 +41,13 @@ module "ecs" {
   }
 
   services = {
-    "${local.prefix}-service" = { #task definition and service name -> #Change
+    "${local.prefix}-service" = {
       cpu    = 512
       memory = 1024
       container_definitions = {
-        "myapp" = { #container name -> Change
+        "myapp" = {
           essential = true
-          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${local.prefix}-ecr:latest"
+          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.id}.amazonaws.com/${local.prefix}-ecr:latest"
           port_mappings = [
             {
               containerPort = 8080
@@ -54,10 +56,10 @@ module "ecs" {
           ]
         }
       }
-      assign_public_ip                   = true
+      assign_public_ip                    = true
       deployment_minimum_healthy_percent = 100
-      subnet_ids                   = var.public_subnets.ids #List of subnet IDs to use for your tasks
-      security_group_ids           = [aws.security_group.ecs_sg.id] #Create a SG resource and pass it here
+      subnet_ids                        = module.vpc.public_subnets
+      security_group_ids                = [aws_security_group.ecs_sg.id]
     }
   }
 }
@@ -67,7 +69,7 @@ module "ecs" {
 resource "aws_security_group" "ecs_sg" {
   name        = "${local.prefix}-ecs-sg"
   description = "Allow HTTP"
-  vpc_id      = var.vpc_id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     from_port   = 8080
@@ -81,6 +83,8 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+
   }
 }
 
@@ -108,6 +112,30 @@ resource "aws_iam_role" "github_oidc_deploy" {
   })
 }
 
+# Attach the policy to define what GitHub Actions is allowed to do
+resource "aws_iam_role_policy" "github_oidc_deploy_policy" {
+  name = "github-oidc-policy"
+  role = aws_iam_role.github_oidc_deploy.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:*",
+          "ec2:*",
+          "ecs:*",
+          "iam:PassRole",
+          "ssm:GetParameter",
+          "cloudwatch:*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "github_oidc_policy" {
   role       = aws_iam_role.github_oidc_deploy.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
@@ -122,7 +150,6 @@ resource "aws_iam_role_policy_attachment" "github_oidc_logs" {
   role       = aws_iam_role.github_oidc_deploy.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
-
 
 
 
